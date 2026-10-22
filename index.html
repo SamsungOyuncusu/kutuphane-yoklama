@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#173b70">
+<meta name="description" content="Kişisel kütüphane yoklama ve çalışma takibi">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>Kütüphane Yoklama</title>
+<style>
+:root{--navy:#173b70;--blue:#2563a6;--pale:#edf4fb;--line:#d7e0eb;--ink:#1d2b3a;--muted:#617184;--green:#19764a;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:#f2f5f9;color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+header{background:var(--navy);color:white;padding:20px max(16px,calc((100% - 960px)/2));}
+header .small{font-size:12px;opacity:.85;letter-spacing:.08em;text-transform:uppercase}
+header h1{font-size:25px;margin:7px 0 4px}header p{margin:0;font-size:14px;opacity:.9}
+main{max-width:960px;margin:18px auto;padding:0 14px 40px;display:grid;gap:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat,.panel{background:white;border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 2px 6px #1b35500a}
+.stat span{font-size:12px;color:var(--muted);display:block}.stat strong{font-size:25px;display:block;margin-top:7px;color:var(--navy)}
+h2{font-size:18px;margin:0 0 14px;color:var(--navy)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{font-size:13px;font-weight:bold;display:block;margin-bottom:6px}
+input,select,textarea{font:inherit;width:100%;padding:11px;border:1px solid #bdcad8;border-radius:8px;background:white;color:var(--ink)}
+textarea{resize:vertical;min-height:74px}
+.field.full{grid-column:1/-1}
+.buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+button{border:0;border-radius:8px;padding:11px 15px;font-weight:bold;cursor:pointer}
+.primary{background:var(--blue);color:white}.secondary{background:var(--pale);color:var(--navy)}.danger{background:#fff0ef;color:var(--red)}
+.notice{font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px}
+.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px;min-width:600px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}th{background:var(--pale);color:var(--navy)}.status{font-weight:bold}.present{color:var(--green)}.absent{color:var(--red)}.closed{color:var(--muted)}.empty{color:var(--muted);padding:18px 0}
+footer{text-align:center;font-size:12px;color:var(--muted);padding:0 16px 24px}
+@media(max-width:560px){header h1{font-size:22px}.stats{gap:7px}.stat{padding:11px}.stat strong{font-size:21px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.panel{padding:13px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="small">Kişisel takip paneli</div>
+  <h1>Kütüphane Yoklama Sistemi</h1>
+  <p>Günlük giriş-çıkış, çalışma planı ve devam takibi</p>
+</header>
+<main>
+  <section class="stats" aria-label="Aylık özet">
+    <div class="stat"><span>Bu ay gelinen gün</span><strong id="presentCount">0</strong></div>
+    <div class="stat"><span>Bu ay kayıtlı gün</span><strong id="recordCount">0</strong></div>
+    <div class="stat"><span>Devam oranı</span><strong id="rate">—</strong></div>
+  </section>
+
+  <section class="panel">
+    <h2>Günlük yoklama kaydı</h2>
+    <form id="recordForm">
+      <div class="grid">
+        <div class="field">
+          <label for="date">Tarih</label>
+          <input id="date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="status">Yoklama durumu</label>
+          <select id="status">
+            <option value="Geldim">Geldim</option>
+            <option value="Gelmedim">Gelmedim</option>
+            <option value="Kütüphane kapalı">Kütüphane kapalı / tatil</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="arrival">Giriş saati</label>
+          <input id="arrival" type="time" value="08:00">
+        </div>
+        <div class="field">
+          <label for="departure">Çıkış saati</label>
+          <input id="departure" type="time" value="10:20">
+        </div>
+        <div class="field full">
+          <label for="subject">Bugünkü çalışma / ders</label>
+          <input id="subject" type="text" placeholder="Örn. Edebiyat 2, matematik tekrarı">
+        </div>
+        <div class="field full">
+          <label for="notes">Notlar</label>
+          <textarea id="notes" placeholder="Bugün ne yaptım? Bir sonraki gelişte ne yapacağım?"></textarea>
+        </div>
+      </div>
+      <div class="buttons">
+        <button class="primary" type="submit">Kaydı kaydet</button>
+        <button class="secondary" type="button" id="resetBtn">Formu temizle</button>
+        <button class="secondary" type="button" id="exportBtn">Kayıtları indir (CSV)</button>
+      </div>
+      <p class="notice">Kayıtlar bu tarayıcıda, bu cihazda saklanır. Tarayıcı verilerini silersen kayıtlar kaybolabilir; yedek için “Kayıtları indir” seçeneğini kullan.</p>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Kayıt geçmişi</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Tarih</th><th>Durum</th><th>Saat</th><th>Çalışma planı</th><th>Not</th><th>İşlem</th></tr></thead>
+        <tbody id="history"></tbody>
+      </table>
+    </div>
+    <div id="empty" class="empty">Henüz kayıt yok. İlk gününü yukarıdan kaydedebilirsin.</div>
+  </section>
+</main>
+<footer>Bu kişisel bir takip aracıdır; okulun resmî yoklama sistemi değildir.</footer>
+<script>
+const KEY='kutuphane-yoklama-v1';
+const $=id=>document.getElementById(id);
+let records=[];
+try{records=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(records))records=[]}catch(e){records=[]}
+const today=new Date();
+$('date').value=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+function save(){localStorage.setItem(KEY,JSON.stringify(records));render()}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){
+ const month=$('date').value.slice(0,7)||today.toISOString().slice(0,7);
+ const monthly=records.filter(r=>r.date.startsWith(month));
+ const came=monthly.filter(r=>r.status==='Geldim').length;
+ const eligible=monthly.filter(r=>r.status!=='Kütüphane kapalı').length;
+ $('presentCount').textContent=came;
+ $('recordCount').textContent=monthly.length;
+ $('rate').textContent=eligible?Math.round(came/eligible*100)+'%':'—';
+ const sorted=[...records].sort((a,b)=>b.date.localeCompare(a.date));
+ $('history').innerHTML=sorted.map(r=>{
+  const cls=r.status==='Geldim'?'present':r.status==='Gelmedim'?'absent':'closed';
+  const times=(r.arrival||'—')+' – '+(r.departure||'—');
+  return `<tr><td>${escapeHtml(r.date)}</td><td class="status ${cls}">${escapeHtml(r.status)}</td><td>${escapeHtml(times)}</td><td>${escapeHtml(r.subject||'—')}</td><td>${escapeHtml(r.notes||'—')}</td><td><button class="danger" data-delete="${escapeHtml(r.date)}">Sil</button></td></tr>`;
+ }).join('');
+ $('empty').style.display=sorted.length?'none':'block';
+}
+$('recordForm').addEventListener('submit',e=>{
+ e.preventDefault();
+ const date=$('date').value;
+ if(!date)return;
+ const item={date,status:$('status').value,arrival:$('arrival').value,departure:$('departure').value,subject:$('subject').value.trim(),notes:$('notes').value.trim()};
+ const idx=records.findIndex(r=>r.date===date);
+ if(idx>=0)records[idx]=item;else records.push(item);
+ save();
+});
+$('history').addEventListener('click',e=>{
+ const btn=e.target.closest('[data-delete]');if(!btn)return;
+ const date=btn.dataset.delete;
+ if(confirm(date+' tarihli kaydı silmek istiyor musun?')){records=records.filter(r=>r.date!==date);save()}
+});
+$('resetBtn').addEventListener('click',()=>{$('status').value='Geldim';$('arrival').value='08:00';$('departure').value='10:20';$('subject').value='';$('notes').value=''});
+$('exportBtn').addEventListener('click',()=>{
+ const rows=[['Tarih','Durum','Giriş','Çıkış','Çalışma','Not'],...records.map(r=>[r.date,r.status,r.arrival,r.departure,r.subject,r.notes])];
+ const csv='\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+ const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='kutuphane-yoklama.csv';a.click();URL.revokeObjectURL(url);
+});
+$('date').addEventListener('change',render);
+render();
+</script>
+<script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(() => {})); }</script>
+</body>
+</html>
